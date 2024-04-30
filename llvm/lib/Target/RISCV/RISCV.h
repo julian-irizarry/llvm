@@ -78,7 +78,7 @@ void initializeVortexBranchDivergence0Pass(PassRegistry&);
 FunctionPass *createVortexBranchDivergence1Pass(int divergenceMode = 0);
 void initializeVortexBranchDivergence1Pass(PassRegistry&);
 
-FunctionPass *createVortexBranchDivergence2Pass(const char* PassName);
+FunctionPass *createVortexBranchDivergence2Pass(int PassMode);
 void initializeVortexBranchDivergence2Pass(PassRegistry&);
 
 ModulePass *createVortexIntrinsicFuncLoweringPass();
