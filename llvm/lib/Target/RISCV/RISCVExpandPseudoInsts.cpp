@@ -137,8 +137,8 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   // condition is false.
   auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
   CC = RISCVCC::getOppositeBranchCondition(CC);
-  
-  // TODO: split/join protection
+
+  llvm::errs() << "error: unimplemented divergent codegen found!\n";
   std::abort();
 
   // Insert branch instruction.

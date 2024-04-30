@@ -11079,6 +11079,7 @@ static MachineBasicBlock *emitReadCycleWidePseudo(MachineInstr &MI,
       .addImm(RISCVSysReg::lookupSysRegByName("CYCLEH")->Encoding)
       .addReg(RISCV::X0);
 
+  llvm::errs() << "error: unimplemented divergent codegen found!\n";
   std::abort();
 
   BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
@@ -11751,7 +11752,7 @@ static MachineBasicBlock *emitFROUND(MachineInstr &MI, MachineBasicBlock *MBB,
   if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
     MIB->setFlag(MachineInstr::MIFlag::NoFPExcept);
 
-  // TODO: split/join protection
+  llvm::errs() << "error: unimplemented divergent codegen found!\n";
   std::abort();
 
   // Insert branch.

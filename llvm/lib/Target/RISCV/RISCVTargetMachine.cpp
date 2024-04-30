@@ -46,6 +46,9 @@ static cl::opt<bool> EnableRedundantCopyElimination(
     cl::desc("Enable the redundant copy elimination pass"), cl::init(true),
     cl::Hidden);
 
+// 0: Disable Vortex Branch Divergence
+// 1: Enable Vortex Branch Divergence with only non-regional-only divergent branches structurized first
+// 2: Enable Vortex Branch Divergence with all divergent branches structurized first
 static cl::opt<int> VortexBranchDivergenceMode(
   "vortex-branch-divergence",
   cl::desc("Set Vortex Branch Divergence Mode"),

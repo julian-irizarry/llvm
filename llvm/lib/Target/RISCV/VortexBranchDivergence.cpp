@@ -819,12 +819,13 @@ void VortexBranchDivergence1::processLoops(LLVMContext* context, Function* funct
 
           // insert a predicate instruction to mask out threads that are exiting the loop
 
-          // insert a mov instruction before split
           IRBuilder<> ir_builder(branch);
           auto succ0 = branch->getSuccessor(0);
           auto cond_orig = branch->getCondition();
           auto cond_orig_i1 = ir_builder.CreateICmpNE(cond_orig, ConstantInt::get(cond_orig->getType(), 0), namePrinter_.ValueName(cond_orig) + ".to.i1");
           auto cond_orig_i32 = ir_builder.CreateIntCast(cond_orig_i1, SizeTTy_, false, namePrinter_.ValueName(cond_orig_i1) + ".to.i32");
+
+          // insert a custom mov instruction to prevent branch condition from being optimized away during codegen
           auto cond = CallInst::Create(mov_func_, cond_orig_i32, namePrinter_.ValueName(cond_orig_i32) + ".mov", branch);
 
           LLVM_DEBUG(dbgs() << "*** insert thread predicate '" << namePrinter_.ValueName(cond) << "' before exiting block: " << namePrinter_.BBName(exiting_block) << "\n");
@@ -838,17 +839,6 @@ void VortexBranchDivergence1::processLoops(LLVMContext* context, Function* funct
           // change branch condition
           auto cond_i1 = ir_builder.CreateICmpNE(cond, ConstantInt::get(SizeTTy_, 0), namePrinter_.ValueName(cond) + ".to.i1");
           branch->setCondition(cond_i1);
-
-          /*// restore thread mask before corresponding exit blocks
-          auto stub = BasicBlock::Create(*context, "loop_exit_stub", function, succ);
-          LLVM_DEBUG(dbgs() << "*** restore thread mask in stub '" << stub->getName() << "' before exit block: " << namePrinter_.BBName(succ) << "\n");
-          stub_blocks.insert(stub);
-          auto stub_br = BranchInst::Create(succ, stub);
-          bool found = replaceSuccessor_.replaceSuccessor(exiting_block, succ, stub);
-          if (!found) {
-            std::abort();
-          }
-          CallInst::Create(tmc_func_, tmask, "", stub_br);*/
         }
       }
     }
@@ -1115,12 +1105,12 @@ bool VortexBranchDivergence2::runOnMachineFunction(MachineFunction &MF) {
   auto& MRI = MF.getRegInfo();
   bool Changed = false;
 
-  for (auto& MBB : MF) {
-    for (auto _MII = MBB.instr_begin(), MIIEnd = MBB.instr_end(); _MII != MIIEnd;) {
-      auto MII = _MII++;
-      auto& MI = *MII;
-
-      if (PassMode_ == 0) {
+  switch (PassMode_) {
+  case 0:
+    for (auto& MBB : MF) {
+      for (auto _MII = MBB.instr_begin(), MIIEnd = MBB.instr_end(); _MII != MIIEnd;) {
+        auto MII = _MII++;
+        auto& MI = *MII;
         if (MI.getOpcode() == RISCV::VX_MOV) {
           auto DestReg = MI.getOperand(0).getReg();
           auto SrcReg = MI.getOperand(1).getReg();
@@ -1128,72 +1118,81 @@ bool VortexBranchDivergence2::runOnMachineFunction(MachineFunction &MF) {
           MI.eraseFromParent();
           Changed = true;
         }
-        continue;
       }
+    }
+    break;
 
-      if (!(MI.getOpcode() == RISCV::VX_SPLIT
-         || MI.getOpcode() == RISCV::VX_SPLIT_N))
-        continue;
+  case 1:
+    for (auto& MBB : MF) {
+      for (auto _MII = MBB.instr_begin(), MIIEnd = MBB.instr_end(); _MII != MIIEnd;) {
+        auto MII = _MII++;
+        auto& MI = *MII;
+        if (!(MI.getOpcode() == RISCV::VX_SPLIT
+          || MI.getOpcode() == RISCV::VX_SPLIT_N))
+          continue;
 
-      // find the corresponding branch instruction
-      auto MII_br = MII;
-      for (;MII_br != MIIEnd; ++MII_br) {
-        if (MII_br->isBranch())
-          break;
-      }
+        // find the corresponding branch instruction
+        auto MII_br = MII;
+        for (;MII_br != MIIEnd; ++MII_br) {
+          if (MII_br->isBranch())
+            break;
+        }
 
-      if (MII_br == MIIEnd) {
-        MachineBasicBlock::iterator MII_join;
-        if (FindNextJoin(&MII_join, std::next(MII), MBB)) {
-          // if a join instruction is found in same block,
+        if (MII_br == MIIEnd
+         || MII_br->getOpcode() == RISCV::PseudoBR) {
+          // if a join instruction is found in same or proceeding fallthrough blocks,
           // that means the protected branch was removed during optimization passes
-          if (_MII == MII_join) {
-            ++_MII;
+          // we can safely remove the left-out split and join instructions
+          MachineBasicBlock::iterator MII_join;
+          if (FindNextJoin(&MII_join, std::next(MII), MBB)) {
+            if (_MII == MII_join) {
+              ++_MII;
+            }
+            MII_join->eraseFromParent();
+            MI.eraseFromParent();
+            LLVM_DEBUG(dbgs() << "*** Vortex: cleanup removed branches!\n");
+            Changed = true;
+            continue;
           }
-          MII_join->eraseFromParent();
-          MI.eraseFromParent();
-          LLVM_DEBUG(dbgs() << "*** Vortex: cleanup removed branches!\n");
+
+          llvm::errs() << "error: missing divergent branch!\n" << MBB << "\n";
+          std::abort();
+        }
+
+        // ensure Branch BEQ/BNE xi, x0
+        if (!(MII_br->getOpcode() == RISCV::BEQ
+          || MII_br->getOpcode() == RISCV::BNE)
+        || !MII_br->getOperand(0).isReg()
+        || !MII_br->getOperand(1).isReg()
+        || MII_br->getOperand(1).getReg() != RISCV::X0) {
+          llvm::errs() << "error: unsupported divergent branch!\n" << MBB << "\n";
+          std::abort();
+        }
+
+        // ensure branch opcode match
+        if (MII_br->getOpcode() == RISCV::BEQ) {
+          switch (MI.getOpcode()) {
+          case RISCV::VX_SPLIT:
+            MI.setDesc(TII->get(RISCV::VX_SPLIT_N));
+            break;
+          case RISCV::VX_SPLIT_N:
+            MI.setDesc(TII->get(RISCV::VX_SPLIT));
+            break;
+          }
+          LLVM_DEBUG(dbgs() << "*** Vortex: fixed predicate opcode!\n");
           Changed = true;
           continue;
         }
-
-        LLVM_DEBUG(dbgs() << "*** Vortex: missing divergent branch\n");
-        LLVM_DEBUG(dbgs() << MBB << "\n");
-        std::abort();
-      }
-
-      // ensure Branch BEQ/BNE xi, x0
-      if (!(MII_br->getOpcode() == RISCV::BEQ
-         || MII_br->getOpcode() == RISCV::BNE)
-       || !MII_br->getOperand(0).isReg()
-       || !MII_br->getOperand(1).isReg()
-       || MII_br->getOperand(1).getReg() != RISCV::X0) {
-        LLVM_DEBUG(dbgs() << "*** Vortex: broken branch!\n");
-        LLVM_DEBUG(dbgs() << MBB << "\n");
-        std::abort();
-      }
-
-      // ensure branch opcode match
-      if (MII_br->getOpcode() == RISCV::BEQ) {
-        switch (MI.getOpcode()) {
-        case RISCV::VX_SPLIT:
-          MI.setDesc(TII->get(RISCV::VX_SPLIT_N));
-          break;
-        case RISCV::VX_SPLIT_N:
-          MI.setDesc(TII->get(RISCV::VX_SPLIT));
-          break;
-        }
-        LLVM_DEBUG(dbgs() << "*** Vortex: fixed predicate opcode!\n");
-        Changed = true;
-        continue;
       }
     }
+    break;
   }
 
   if (Changed) {
     LLVM_DEBUG(dbgs() << "*** after changes!\n" << MF.getName() << "\n");
     LLVM_DEBUG(MF.dump(););
   }
+
   return false;
 }
 
