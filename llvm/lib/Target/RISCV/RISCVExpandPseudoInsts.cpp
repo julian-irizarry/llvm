@@ -137,6 +137,9 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   // condition is false.
   auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
   CC = RISCVCC::getOppositeBranchCondition(CC);
+  
+  // TODO: split/join protection
+  std::abort();
 
   // Insert branch instruction.
   BuildMI(MBB, MBBI, DL, TII->getBrCond(CC))

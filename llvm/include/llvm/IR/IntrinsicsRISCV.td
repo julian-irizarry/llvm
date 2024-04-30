@@ -73,11 +73,14 @@ let TargetPrefix = "riscv" in {
   defm int_riscv_masked_cmpxchg : MaskedAtomicRMWFiveArgIntrinsics;
 
   // Vortex extension
-  def int_riscv_vx_tmask : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem, IntrHasSideEffects]>;
-  def int_riscv_vx_tmc   : Intrinsic<[], [llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent]>;
-  def int_riscv_vx_pred  : Intrinsic<[], [llvm_anyint_ty, llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent]>;
-  def int_riscv_vx_split : Intrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent]>;
-  def int_riscv_vx_join  : Intrinsic<[], [llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent]>;
+  def int_riscv_vx_tmask : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem, IntrWillReturn]>;
+  def int_riscv_vx_tmc   : Intrinsic<[], [llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
+  def int_riscv_vx_pred  : Intrinsic<[], [llvm_anyint_ty, llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
+  def int_riscv_vx_pred_n : Intrinsic<[], [llvm_anyint_ty, llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
+  def int_riscv_vx_split : Intrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
+  def int_riscv_vx_split_n : Intrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
+  def int_riscv_vx_join  : Intrinsic<[], [llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
+  def int_riscv_vx_mov   : Intrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
 
   // shin
   def int_riscv_vx_bar  : Intrinsic<[], [llvm_anyint_ty, llvm_anyint_ty], [IntrNoMem]>;
@@ -590,7 +593,7 @@ let TargetPrefix = "riscv" in {
   class RISCVClassifyMasked
         : DefaultAttrsIntrinsic<[LLVMVectorOfBitcastsToInt<0>],
                     [LLVMVectorOfBitcastsToInt<0>, llvm_anyvector_ty,
-                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, 
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      llvm_anyint_ty, LLVMMatchType<1>],
                     [IntrNoMem, ImmArg<ArgIndex<4>>]>, RISCVVIntrinsic {
     let VLOperand = 3;

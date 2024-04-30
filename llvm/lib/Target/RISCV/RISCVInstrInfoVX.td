@@ -38,6 +38,10 @@ def VX_SPLIT : RVInstR<0, 2, RISCV_CUSTOM0, (outs GPR:$rd), (ins GPR:$rs1), "vx_
     let rs2 = 0;
 }
 
+def VX_SPLIT_N : RVInstR<0, 2, RISCV_CUSTOM0, (outs GPR:$rd), (ins GPR:$rs1), "vx_split_n", "$rd, $rs1">, Sched<[]> {
+    let rs2 = 1;
+}
+
 def VX_JOIN : RVInstR<0, 3, RISCV_CUSTOM0, (outs), (ins GPR:$rs1), "vx_join", "$rs1">, Sched<[]> {
     let rd  = 0;
     let rs2 = 0;
@@ -49,7 +53,11 @@ def VX_BAR : RVInstR<0, 4, RISCV_CUSTOM0, (outs), (ins GPR:$rs1, GPR:$rs2), "vx_
 }
 
 def VX_PRED : RVInstR<0, 5, RISCV_CUSTOM0, (outs), (ins GPR:$rs1, GPR:$rs2), "vx_pred", "$rs1, $rs2">, Sched<[]> {
-    let rd  = 0;
+    let rd = 0;
+}
+
+def VX_PRED_N : RVInstR<0, 5, RISCV_CUSTOM0, (outs), (ins GPR:$rs1, GPR:$rs2), "vx_pred_n", "$rs1, $rs2">, Sched<[]> {
+    let rd = 1;
 }
 
 def VX_TEX : VXInstR4<RISCV_CUSTOM1, (outs GPR:$rd), (ins uimm2:$funct2, GPR:$rs1, GPR:$rs2, GPR:$rs3), "vx_tex", "$rd, $funct2, $rs1, $rs2, $rs3">, Sched<[]> {
@@ -72,6 +80,8 @@ def VX_RAST : RVInstR<1, 0, RISCV_CUSTOM0, (outs GPR:$rd), (ins), "vx_rast", "">
     let rs2 = 0;
 }
 
+def VX_MOV : Pseudo<(outs GPR:$dst), (ins GPR:$src), [], "vx_mov", "$dst, $src"> {}
+
 }
 
 def CSR_TMASK : SysReg<"tmask", 0xCC4>;
@@ -82,9 +92,15 @@ def : Pat<(int_riscv_vx_tmc GPR:$rs1), (VX_TMC GPR:$rs1)>;
 
 def : Pat<(int_riscv_vx_pred GPR:$rs1, GPR:$rs2), (VX_PRED GPR:$rs1, GPR:$rs2)>;
 
+def : Pat<(int_riscv_vx_pred_n GPR:$rs1, GPR:$rs2), (VX_PRED_N GPR:$rs1, GPR:$rs2)>;
+
 def : Pat<(int_riscv_vx_split GPR:$rs1), (VX_SPLIT GPR:$rs1)>;
 
+def : Pat<(int_riscv_vx_split_n GPR:$rs1), (VX_SPLIT_N GPR:$rs1)>;
+
 def : Pat<(int_riscv_vx_join GPR:$rs1), (VX_JOIN GPR:$rs1)>;
+
+def : Pat<(int_riscv_vx_mov GPR:$src), (VX_MOV GPR:$src)>;
 
 def CSR_NT : SysReg<"nt", 0xFC0>;
 def CSR_NW : SysReg<"nw", 0xFC1>;

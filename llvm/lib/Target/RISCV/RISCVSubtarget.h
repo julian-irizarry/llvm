@@ -61,6 +61,7 @@ private:
   RISCVRegisterInfo RegInfo;
   RISCVTargetLowering TLInfo;
   SelectionDAGTargetInfo TSInfo;
+  bool isVortex_;
 
   /// Initializes using the passed in CPU and feature strings so that we can
   /// use initializer lists for subtarget initialization.
@@ -94,6 +95,10 @@ public:
     return &TSInfo;
   }
   bool enableMachineScheduler() const override { return true; }
+
+  bool isVortex() const {
+    return isVortex_;
+  }
 
   /// Returns RISCV processor family.
   /// Avoid this function! CPU specifics should be kept local to this class

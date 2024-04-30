@@ -19,7 +19,7 @@ CP=${LLVM_PREFIX}/bin/llvm-objcopy
 
 K_LLCFLAGS="-march=riscv32 -target-abi=ilp32f -mcpu=generic-rv32 -mattr=+m,+f,+vortex -float-abi=hard"
 K_CFLAGS="--sysroot=${SYSROOT} --gcc-toolchain=${RISCV_TOOLCHAIN_PATH} -march=rv32imf -mabi=ilp32f -Xclang -target-feature -Xclang +vortex -I${VORTEX_PATH}/hw -I${VORTEX_RT_PATH}/include -fno-rtti -fno-exceptions -ffreestanding -nostartfiles -fdata-sections -ffunction-sections"
-K_LDFLAGS="-Wl,-Bstatic,-T${VORTEX_RT_PATH}/linker/vx_link32.ld,--gc-sections ${VORTEX_RT_PATH}/libvortexrt.a -lm"
+K_LDFLAGS="-Wl,-Bstatic,-T${VORTEX_RT_PATH}/scripts/link32.ld,--gc-sections ${VORTEX_RT_PATH}/libvortexrt.a -lm"
 
 # exit when any command fails
 set -e
@@ -76,7 +76,7 @@ codegen()
     rm -f ${TEST}.elf
     rm -f ${TEST}.dump
     #${LLVM_PREFIX}/bin/clang ${TEST}.c -v --target=riscv32 -march=rv32imf -Xclang -target-feature -Xclang +vortex -S -o ${TEST}.s
-    #${LLVM_PREFIX}/bin/clang ${TEST}.c -v -Wl,-Bstatic,-T${VORTEX_RT_PATH}/linker/vx_link.ld -Wl,--gc-sections ${VORTEX_RT_PATH}/libvortexrt.a -lm --sysroot=${SYSROOT} --gcc-toolchain=${RISCV_TOOLCHAIN_PATH} -march=rv32imf -mabi=ilp32f -I${VORTEX_RT_PATH}/include -fno-rtti -fno-exceptions -ffreestanding -nostartfiles -fdata-sections -ffunction-sections --target=riscv32 -march=rv32imf -Xclang -target-feature -Xclang +vortex -o ${TEST}.elf
+    #${LLVM_PREFIX}/bin/clang ${TEST}.c -v -Wl,-Bstatic,-T${VORTEX_RT_PATH}/scripts/link.ld -Wl,--gc-sections ${VORTEX_RT_PATH}/libvortexrt.a -lm --sysroot=${SYSROOT} --gcc-toolchain=${RISCV_TOOLCHAIN_PATH} -march=rv32imf -mabi=ilp32f -I${VORTEX_RT_PATH}/include -fno-rtti -fno-exceptions -ffreestanding -nostartfiles -fdata-sections -ffunction-sections --target=riscv32 -march=rv32imf -Xclang -target-feature -Xclang +vortex -o ${TEST}.elf
     #${LLVM_PREFIX}/bin/clang ${K_CFLAGS} ${TEST}.c ${K_LDFLAGS} -o ${TEST}.elf -mllvm -debug-pass=Arguments > build.log 2>&1
     #${LLVM_PREFIX}/bin/clang ${K_CFLAGS} ${TEST}.c -S -o ${TEST}.s 2> /dev/null    
     #${LLVM_PREFIX}/bin/clang ${K_CFLAGS} ${TEST}.c -c -o ${TEST}.o

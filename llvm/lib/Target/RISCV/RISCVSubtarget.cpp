@@ -93,6 +93,7 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
   RegBankInfo.reset(RBI);
   InstSelector.reset(createRISCVInstructionSelector(
       *static_cast<const RISCVTargetMachine *>(&TM), *this, *RBI));
+  isVortex_ = FS.contains("vortex");
 }
 
 const CallLowering *RISCVSubtarget::getCallLowering() const {
