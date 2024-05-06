@@ -408,13 +408,13 @@ void VortexBranchDivergence0::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool VortexBranchDivergence0::runOnFunction(Function &F) {
-  // Check if the Vortex extension is enabled
   auto &Context = F.getContext();
   const auto &TPC = getAnalysis<TargetPassConfig>();
   const auto &TM = TPC.getTM<TargetMachine>();
   const auto &ST = TM.getSubtarget<RISCVSubtarget>(F);
-  if (!ST.hasExtVortex())
-    return false;
+
+  // Check if the Vortex extension is enabled
+  assert(!ST.hasExtVortex());
 
   LLVM_DEBUG(dbgs() << "*** Vortex Divergent Branch Handling Pass0 ***\n");
 
@@ -668,11 +668,12 @@ void VortexBranchDivergence1::initialize(Function &F, const RISCVSubtarget &ST) 
 }
 
 bool VortexBranchDivergence1::runOnFunction(Function &F) {
-  LLVM_DEBUG(dbgs() << "*** Vortex Divergent Branch Handling ***\n");
-
   const auto &TPC = getAnalysis<TargetPassConfig>();
   const auto &TM = TPC.getTM<TargetMachine>();
   const auto &ST = TM.getSubtarget<RISCVSubtarget>(F);
+
+  // Check if the Vortex extension is enabled
+  assert(!ST.hasExtVortex());
 
   this->initialize(F, ST);
 
@@ -1101,8 +1102,13 @@ static bool FindNextJoin(MachineBasicBlock::iterator* out,
 }
 
 bool VortexBranchDivergence2::runOnMachineFunction(MachineFunction &MF) {
-  auto TII = MF.getSubtarget().getInstrInfo();
+  const auto &ST = MF.getSubtarget();
+  auto TII = ST.getInstrInfo();
   auto& MRI = MF.getRegInfo();
+
+  // Check if the Vortex extension is enabled
+  assert(!ST.hasExtVortex());
+
   bool Changed = false;
 
   switch (PassMode_) {

@@ -53,6 +53,7 @@ static cl::opt<int> VortexBranchDivergenceMode(
   "vortex-branch-divergence",
   cl::desc("Set Vortex Branch Divergence Mode"),
   cl::init(1));
+int gVortexBranchDivergenceMode = 0;
 
 static cl::opt<int> VortexKernelSchedulerMode(
   "vortex-kernel-scheduler",
@@ -99,6 +100,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVInsertVSETVLIPass(*PR);
   initializeRISCVDAGToDAGISelPass(*PR);
   if (VortexBranchDivergenceMode != 0) {
+    gVortexBranchDivergenceMode = 1;
     initializeVortexBranchDivergence0Pass(*PR);
     initializeVortexBranchDivergence1Pass(*PR);
     initializeVortexBranchDivergence2Pass(*PR);
@@ -136,8 +138,8 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
   setMachineOutliner(true);
   setSupportsDefaultOutlining(true);
   // Detect Vortex extension
-  isVortex_ = FS.contains("vortex");
-  if (isVortex_) {
+  auto isVortex = FS.contains("vortex");
+  if (isVortex) {
     setRequiresStructuredCFG(true);
   }
 }
@@ -323,19 +325,21 @@ bool RISCVPassConfig::addPreISel() {
                                   /* MergeExternalByDefault */ true));
   }
 
-  if (VortexBranchDivergenceMode != 0) {
-    addPass(createScalarizerPass());
-    addPass(createCFGSimplificationPass());
-    addPass(createSinkingPass());
-    addPass(createLoopSimplifyCFGPass());
-    addPass(createLowerSwitchPass());
-    addPass(createFlattenCFGPass());
-    addPass(createVortexBranchDivergence0Pass());
-    addPass(createStructurizeCFGPass(true, (VortexBranchDivergenceMode == 1)));
-    addPass(createVortexBranchDivergence1Pass(VortexBranchDivergenceMode));
-  }
-  if (VortexKernelSchedulerMode != 0) {
-    addPass(createVortexIntrinsicFuncLoweringPass());
+  if (TM->getTargetFeatureString().contains("vortex")) {
+    if (VortexBranchDivergenceMode != 0) {
+      addPass(createScalarizerPass());
+      addPass(createCFGSimplificationPass());
+      addPass(createSinkingPass());
+      addPass(createLoopSimplifyCFGPass());
+      addPass(createLowerSwitchPass());
+      addPass(createFlattenCFGPass());
+      addPass(createVortexBranchDivergence0Pass());
+      addPass(createStructurizeCFGPass(true, (VortexBranchDivergenceMode == 1)));
+      addPass(createVortexBranchDivergence1Pass(VortexBranchDivergenceMode));
+    }
+    if (VortexKernelSchedulerMode != 0) {
+      addPass(createVortexIntrinsicFuncLoweringPass());
+    }
   }
   return false;
 }
@@ -379,7 +383,8 @@ void RISCVPassConfig::addPreEmitPass2() {
   // possibility for other passes to break the requirements for forward
   // progress in the LR/SC block.
   addPass(createRISCVExpandAtomicPseudoPass());
-  if (VortexBranchDivergenceMode != 0) {
+  if (TM->getTargetFeatureString().contains("vortex")
+   && VortexBranchDivergenceMode != 0) {
     addPass(createVortexBranchDivergence2Pass(1));
   }
 }
@@ -400,7 +405,8 @@ void RISCVPassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() != CodeGenOpt::None)
     addPass(createRISCVMergeBaseOffsetOptPass());
   addPass(createRISCVInsertVSETVLIPass());
-  if (VortexBranchDivergenceMode != 0) {
+  if (TM->getTargetFeatureString().contains("vortex")
+   && VortexBranchDivergenceMode != 0) {
     addPass(createVortexBranchDivergence2Pass(0));
   }
 }

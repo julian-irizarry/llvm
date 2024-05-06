@@ -35,7 +35,7 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
 
   const RISCVSubtarget *ST;
   const RISCVTargetLowering *TLI;
-  vortex::DivergenceTracker divergence_tracker_; 
+  vortex::DivergenceTracker divergence_tracker_;
   bool hasBranchDivergence_;
 
   const RISCVSubtarget *getST() const { return ST; }
@@ -59,7 +59,7 @@ public:
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F))
       , TLI(ST->getTargetLowering())
       , divergence_tracker_(F)
-      , hasBranchDivergence_(TM->isVortex())
+      , hasBranchDivergence_(ST->hasExtVortex())
     {}
 
   /// Return the cost of materializing an immediate for a value operand of

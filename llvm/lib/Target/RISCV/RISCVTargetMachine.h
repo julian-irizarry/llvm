@@ -24,7 +24,6 @@ namespace llvm {
 class RISCVTargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<RISCVSubtarget>> SubtargetMap;
-  bool isVortex_;
 
 public:
   RISCVTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -52,10 +51,6 @@ public:
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DstAS) const override;
-
-  bool isVortex() const {
-    return isVortex_;
-  }
 
   yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;
   yaml::MachineFunctionInfo *

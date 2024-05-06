@@ -51,6 +51,8 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
+extern int gVortexBranchDivergenceMode;
+
 static cl::opt<unsigned> ExtensionMaxWebSize(
     DEBUG_TYPE "-ext-max-web-size", cl::Hidden,
     cl::desc("Give the maximum size (in number of nodes) of the web of "
@@ -11370,7 +11372,7 @@ EmitLoweredCascadedSelect(MachineInstr &First, MachineInstr &Second,
   Register DestReg = Second.getOperand(0).getReg();
   Register Op2Reg4 = Second.getOperand(4).getReg();
 
-  if (Subtarget.isVortex()) {
+  if (Subtarget.hasExtVortex() && gVortexBranchDivergenceMode != 0) {
     MachineBasicBlock *SinkMBB1 = F->CreateMachineBasicBlock(LLVM_BB);
     F->insert(It, SinkMBB1);
 
@@ -11550,7 +11552,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   HeadMBB->addSuccessor(IfFalseMBB);
   HeadMBB->addSuccessor(TailMBB);
 
-  if (Subtarget.isVortex()) {
+  if (Subtarget.hasExtVortex() && gVortexBranchDivergenceMode != 0) {
     Register CCReg, DVReg;
     InsertVXSplit(&CCReg, &DVReg, CC, LHS, RHS, *HeadMBB, HeadMBB->end(), DL, TII);
 
