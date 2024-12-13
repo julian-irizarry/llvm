@@ -89,8 +89,35 @@ RISCVToolChain::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
 void RISCVToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind) const {
+    Action::OffloadKind OFK) const {
   CC1Args.push_back("-nostdsysteminc");
+
+  if (OFK == Action::OFK_OpenMP) {
+    if (DriverArgs.hasArg(options::OPT_fopenmp_targets_EQ)) {
+      for (auto *Arg : DriverArgs.filtered(options::OPT_fopenmp_targets_EQ)) {
+        for (StringRef Target : Arg->getValues()) {
+          if (Target == "vortex") {
+            if (DriverArgs.getLastArg(options::OPT_aux_triple) &&
+                StringRef(DriverArgs.getLastArgValue(options::OPT_aux_triple)) == "riscv64-unknown-elf") {
+              // Add Vortex-specific flags
+              CC1Args.push_back("-march=rv64imafd");
+              CC1Args.push_back("-mabi=lp64d");
+              CC1Args.push_back("-target-feature");
+              CC1Args.push_back("+vortex");
+              CC1Args.push_back("-target-feature");
+              CC1Args.push_back("+zicond");
+              CC1Args.push_back("-O3");
+              CC1Args.push_back("-mcmodel=medany");
+              CC1Args.push_back("-fno-rtti");
+              CC1Args.push_back("-fno-exceptions");
+              CC1Args.push_back("-nostdlib");
+            }
+            return;
+          }
+        }
+      }
+    }
+  }
 }
 
 void RISCVToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,

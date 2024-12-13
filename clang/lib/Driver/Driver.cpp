@@ -817,7 +817,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                                 *HostTC, OFK);
     assert(HIPTC && "Could not create offloading device tool chain.");
     C.addOffloadDeviceToolChain(HIPTC, OFK);
-  }
+  } 
 
   //
   // OpenMP
@@ -929,9 +929,23 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       FoundNormalizedTriples[NormalizedName] = Val;
 
       // If the specified target is invalid, emit a diagnostic.
-      if (TT.getArch() == llvm::Triple::UnknownArch)
+      if (TT.getArch() == llvm::Triple::UnknownArch) {
         Diag(clang::diag::err_drv_invalid_omp_target) << Val;
-      else {
+      } else if (TT.getArch() == llvm::Triple::riscv64 && Val == "vortex") {
+        const ToolChain *HostTC =
+            C.getSingleOffloadToolChain<Action::OFK_Host>();
+        assert(HostTC && "Host toolchain should be always defined.");
+        auto &DeviceTC =
+            ToolChains[TT.str() + "/" + HostTC->getTriple().normalize()];
+        if (!DeviceTC) {
+          DeviceTC = std::make_unique<toolchains::RISCVToolChain>(
+              *this, TT, C.getInputArgs());
+        }
+
+        C.addOffloadDeviceToolChain(DeviceTC.get(), Action::OFK_OpenMP);
+        if (DerivedArchs.contains(TT.getTriple()))
+          KnownArchs[DeviceTC.get()] = DerivedArchs[TT.getTriple()];
+      } else {
         const ToolChain *TC;
         // Device toolchains have to be selected differently. They pair host
         // and device in their implementation.

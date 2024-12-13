@@ -799,11 +799,15 @@ public:
         return llvm::Triple("nvptx64-nvidia-cuda");
       if (TT.getArch() == llvm::Triple::amdgcn)
         return llvm::Triple("amdgcn-amd-amdhsa");
+
+      // Add mapping for vortex
+      if (TripleStr == "vortex") {
+        return llvm::Triple("riscv64-unknown-elf");
+      }
     }
     return TT;
   }
 };
-
 /// Set a ToolChain's effective triple. Reset it when the registration object
 /// is destroyed.
 class RegisterEffectiveTriple {
