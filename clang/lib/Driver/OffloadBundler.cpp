@@ -108,7 +108,7 @@ bool OffloadTargetInfo::hasHostKind() const {
 
 bool OffloadTargetInfo::isOffloadKindValid() const {
   return OffloadKind == "host" || OffloadKind == "openmp" ||
-         OffloadKind == "hip" || OffloadKind == "hipv4";
+         OffloadKind == "hip" || OffloadKind == "hipv4" || OffloadKind == "riscv64";
 }
 
 bool OffloadTargetInfo::isOffloadKindCompatible(

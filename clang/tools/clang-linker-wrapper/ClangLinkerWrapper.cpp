@@ -393,7 +393,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     CmdArgs.push_back(InputFile);
 
   // If this is CPU offloading we copy the input libraries.
-  if (!Triple.isAMDGPU() && !Triple.isNVPTX()) {
+  if (!Triple.isAMDGPU() && !Triple.isNVPTX() && !Triple.isRISCV64()) {
     CmdArgs.push_back("-Wl,-Bsymbolic");
     CmdArgs.push_back("-shared");
     ArgStringList LinkerArgs;
@@ -482,6 +482,8 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::aarch64_be:
   case Triple::ppc64:
   case Triple::ppc64le:
+  case Triple::riscv32:
+  case Triple::riscv64:
     return generic::clang(InputFiles, Args);
   default:
     return createStringError(inconvertibleErrorCode(),
